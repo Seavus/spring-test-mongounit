@@ -1,0 +1,47 @@
+**/*.iml
+
+## Directory-based project format:
+.idea/*
+
+## File-based project format:
+*.ipr
+*.iws
+*.war
+
+### eclipse:
+**/.project
+**/.classpath
+**/.settings/**
+
+# mpeltonen/sbt-idea plugin
+**/.idea_modules/
+
+# Default IDEA properties
+!/.idea/codeStyleSettings.xml
+!/.idea/copyright
+!/.idea/codeStyles
+
+### Maven ###
+**/target/
+
+# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+hs_err_pid*
+
+.metadata
+
+# misc
+.sass-cache
+connect.lock
+coverage/*
+libpeerconnection.log
+npm-debug.log
+testem.log
+typings
+
+# e2e
+e2e/*.js
+e2e/*.map
+
+#System Files
+.DS_Store
+Thumbs.db
