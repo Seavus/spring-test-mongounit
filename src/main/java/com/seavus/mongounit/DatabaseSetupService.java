@@ -47,7 +47,15 @@ import org.springframework.test.context.TestContext;
 @Service
 class DatabaseSetupService {
 
-    void loadResourcesToDatabase(TestContext testContext) {
+    void cleanUp(TestContext testContext) {
+        loadResourcesToDatabase(testContext, true);
+    }
+
+    void init(TestContext testContext) {
+        loadResourcesToDatabase(testContext, false);
+    }
+
+    private void loadResourcesToDatabase(TestContext testContext, boolean isCleanup) {
         MongoTemplate mongoTemplate = testContext.getApplicationContext().getBean(MongoTemplate.class);
         if (mongoTemplate == null) {
             throw new MongoUnitException(
@@ -58,12 +66,13 @@ class DatabaseSetupService {
         for (DatabaseSetupAnnotationAttributes attributes : DatabaseSetupAnnotationAttributes.get(annotations)) {
             String[] resources = attributes.getValue();
             for (String resourceName : resources) {
-                loadResourceToDatabase(resourceName, testContext, mongoTemplate);
+                loadResourceToDatabase(resourceName, testContext, mongoTemplate, isCleanup);
             }
         }
     }
 
-    private void loadResourceToDatabase(String resourceName, TestContext testContext, MongoTemplate mongoTemplate) {
+    private void loadResourceToDatabase(String resourceName, TestContext testContext, MongoTemplate mongoTemplate,
+            boolean isCleanup) {
         try {
             Resource resource = loadResource(resourceName, testContext);
 
@@ -73,7 +82,11 @@ class DatabaseSetupService {
 
             BasicDBObject dbObject = parseResourceToDbObject(resource);
             dbObject.keySet().forEach(collection -> {
-                executeMongoOperationsForCollection(mongoTemplate, dbObject, collection);
+                if (isCleanup) {
+                    executeCleanupMongoOperationsForCollection(mongoTemplate, collection);
+                } else {
+                    executeMongoOperationsForCollection(mongoTemplate, dbObject, collection);
+                }
             });
         } catch (IOException | BsonInvalidOperationException e) {
             throw new MongoUnitException("Could not read content from provided resource: " + resourceName, e);
@@ -85,6 +98,10 @@ class DatabaseSetupService {
         Object collectionData = dbObject.get(collection);
         mongoTemplate.dropCollection(collection);
         mongoTemplate.save(collectionData, collection);
+    }
+
+    private void executeCleanupMongoOperationsForCollection(MongoTemplate mongoTemplate, String collection) {
+        mongoTemplate.dropCollection(collection);
     }
 
     private BasicDBObject parseResourceToDbObject(Resource resource) throws IOException {

@@ -42,6 +42,11 @@ public class DatabaseSetupExecutionListener extends AbstractTestExecutionListene
 
     @Override
     public void beforeTestMethod(TestContext testContext) {
-        databaseSetupService.loadResourcesToDatabase(testContext);
+        databaseSetupService.init(testContext);
+    }
+
+    @Override
+    public void afterTestMethod(TestContext testContext) throws Exception {
+        databaseSetupService.cleanUp(testContext);
     }
 }

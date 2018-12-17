@@ -53,8 +53,7 @@ public class DatabaseSetupServiceTest {
     @Test
     public void shouldThrowIfMongoTemplateIsNotProvided() {
         when(applicationContext.getBean(MongoTemplate.class)).thenReturn(null);
-        Throwable throwable = catchThrowable(() -> databaseSetupService.loadResourcesToDatabase(new TestContext(
-                applicationContext,
+        Throwable throwable = catchThrowable(() -> databaseSetupService.init(new TestContext(applicationContext,
                 null)));
 
         assertThat(throwable).isInstanceOf(MongoUnitException.class);
@@ -66,8 +65,7 @@ public class DatabaseSetupServiceTest {
     public void shouldThrowIfProvidedResourceDoesntExists() {
         when(applicationContext.getBean(MongoTemplate.class)).thenReturn(mongoTemplate);
 
-        Throwable throwable = catchThrowable(() -> databaseSetupService.loadResourcesToDatabase(new TestContext(
-                applicationContext,
+        Throwable throwable = catchThrowable(() -> databaseSetupService.init(new TestContext(applicationContext,
                 NonExistingResourceTestClass.class)));
 
         assertThat(throwable).isInstanceOf(MongoUnitException.class);
@@ -78,8 +76,7 @@ public class DatabaseSetupServiceTest {
     public void shouldThrowIfProvidedResourceIsNotAValidJsonObject() {
         when(applicationContext.getBean(MongoTemplate.class)).thenReturn(mongoTemplate);
 
-        Throwable throwable = catchThrowable(() -> databaseSetupService.loadResourcesToDatabase(new TestContext(
-                applicationContext,
+        Throwable throwable = catchThrowable(() -> databaseSetupService.init(new TestContext(applicationContext,
                 InvalidJsonResourceTestClass.class)));
 
         assertThat(throwable).isInstanceOf(MongoUnitException.class);
@@ -90,8 +87,7 @@ public class DatabaseSetupServiceTest {
     public void shouldLoadMethodResourcesToDatabase() {
         when(applicationContext.getBean(MongoTemplate.class)).thenReturn(mongoTemplate);
 
-        databaseSetupService.loadResourcesToDatabase(new TestContext(applicationContext,
-                MethodResourceTestClass.class));
+        databaseSetupService.init(new TestContext(applicationContext, MethodResourceTestClass.class));
 
         verify(mongoTemplate).dropCollection("methodTestResource");
         verify(mongoTemplate).save(new BasicDBObject(), "methodTestResource");
@@ -101,7 +97,7 @@ public class DatabaseSetupServiceTest {
     public void shouldLoadClassResourcesToDatabase() {
         when(applicationContext.getBean(MongoTemplate.class)).thenReturn(mongoTemplate);
 
-        databaseSetupService.loadResourcesToDatabase(new TestContext(applicationContext, ClassResourceTestClass.class));
+        databaseSetupService.init(new TestContext(applicationContext, ClassResourceTestClass.class));
 
         verify(mongoTemplate).dropCollection("classTestResource");
         verify(mongoTemplate).save(new BasicDBObject(), "classTestResource");
@@ -111,13 +107,22 @@ public class DatabaseSetupServiceTest {
     public void shouldLoadMultipleResources() {
         when(applicationContext.getBean(MongoTemplate.class)).thenReturn(mongoTemplate);
 
-        databaseSetupService.loadResourcesToDatabase(new TestContext(applicationContext,
-                MultipleResourceTestClass.class));
+        databaseSetupService.init(new TestContext(applicationContext, MultipleResourceTestClass.class));
 
         verify(mongoTemplate).dropCollection("methodTestResource");
         verify(mongoTemplate).save(new BasicDBObject(), "methodTestResource");
         verify(mongoTemplate).dropCollection("classTestResource");
         verify(mongoTemplate).save(new BasicDBObject(), "classTestResource");
+    }
+
+    @Test
+    public void shouldDropCollectionsOnCleanup() {
+        when(applicationContext.getBean(MongoTemplate.class)).thenReturn(mongoTemplate);
+
+        databaseSetupService.cleanUp(new TestContext(applicationContext, MultipleResourceTestClass.class));
+
+        verify(mongoTemplate).dropCollection("methodTestResource");
+        verify(mongoTemplate).dropCollection("classTestResource");
     }
 
     private class MultipleResourceTestClass {
