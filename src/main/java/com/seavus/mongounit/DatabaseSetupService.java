@@ -23,6 +23,7 @@
 
 package com.seavus.mongounit;
 
+import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
 import java.io.File;
 import java.io.IOException;
@@ -97,7 +98,15 @@ class DatabaseSetupService {
             String collection) {
         Object collectionData = dbObject.get(collection);
         mongoTemplate.dropCollection(collection);
-        mongoTemplate.save(collectionData, collection);
+
+        if (collectionData instanceof BasicDBList) {
+            ((BasicDBList) collectionData).forEach(o -> {
+                mongoTemplate.save(o, collection);
+            });
+        }
+        if (collectionData instanceof BasicDBObject) {
+            mongoTemplate.save(collectionData, collection);
+        }
     }
 
     private void executeCleanupMongoOperationsForCollection(MongoTemplate mongoTemplate, String collection) {

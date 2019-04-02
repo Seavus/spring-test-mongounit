@@ -33,6 +33,7 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -94,6 +95,16 @@ public class DatabaseSetupServiceTest {
     }
 
     @Test
+    public void shouldLoadArrayOfResourcesToDatabase() {
+        when(applicationContext.getBean(MongoTemplate.class)).thenReturn(mongoTemplate);
+
+        databaseSetupService.init(new TestContext(applicationContext, ArrayOfResourceTestClass.class));
+
+        verify(mongoTemplate).dropCollection("methodTestResource");
+        verify(mongoTemplate, times(2)).save(new BasicDBObject(), "methodTestResource");
+    }
+
+    @Test
     public void shouldLoadClassResourcesToDatabase() {
         when(applicationContext.getBean(MongoTemplate.class)).thenReturn(mongoTemplate);
 
@@ -136,6 +147,14 @@ public class DatabaseSetupServiceTest {
     private class MethodResourceTestClass {
 
         @DatabaseSetup("MethodTestResource.json")
+        public void testMethod() {
+
+        }
+    }
+
+    private class ArrayOfResourceTestClass {
+
+        @DatabaseSetup("ArrayOfResource.json")
         public void testMethod() {
 
         }
