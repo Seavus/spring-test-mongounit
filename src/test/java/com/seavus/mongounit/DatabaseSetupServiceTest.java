@@ -33,9 +33,7 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class DatabaseSetupServiceTest {
 
@@ -55,11 +53,12 @@ public class DatabaseSetupServiceTest {
     public void shouldThrowIfMongoTemplateIsNotProvided() {
         when(applicationContext.getBean(MongoTemplate.class)).thenReturn(null);
         Throwable throwable = catchThrowable(() -> databaseSetupService.init(new TestContext(applicationContext,
-                null)));
+            null)));
 
         assertThat(throwable).isInstanceOf(MongoUnitException.class);
         assertThat(throwable.getMessage()).isEqualTo(
-                "You must provide a valid bean for org.springframework.data.mongodb.core.MongoTemplate before using " + "@DatabaseSetup");
+            "You must provide a valid bean for org.springframework.data.mongodb.core.MongoTemplate before using " + 
+                "@DatabaseSetup");
     }
 
     @Test
@@ -67,7 +66,7 @@ public class DatabaseSetupServiceTest {
         when(applicationContext.getBean(MongoTemplate.class)).thenReturn(mongoTemplate);
 
         Throwable throwable = catchThrowable(() -> databaseSetupService.init(new TestContext(applicationContext,
-                NonExistingResourceTestClass.class)));
+            NonExistingResourceTestClass.class)));
 
         assertThat(throwable).isInstanceOf(MongoUnitException.class);
         assertThat(throwable.getMessage()).startsWith("The resource you provided doesn't exists on path");
@@ -78,7 +77,7 @@ public class DatabaseSetupServiceTest {
         when(applicationContext.getBean(MongoTemplate.class)).thenReturn(mongoTemplate);
 
         Throwable throwable = catchThrowable(() -> databaseSetupService.init(new TestContext(applicationContext,
-                InvalidJsonResourceTestClass.class)));
+            InvalidJsonResourceTestClass.class)));
 
         assertThat(throwable).isInstanceOf(MongoUnitException.class);
         assertThat(throwable.getMessage()).startsWith("Could not read content from provided resource:");
@@ -132,8 +131,7 @@ public class DatabaseSetupServiceTest {
 
         databaseSetupService.cleanUp(new TestContext(applicationContext, MultipleResourceTestClass.class));
 
-        verify(mongoTemplate).dropCollection("methodTestResource");
-        verify(mongoTemplate).dropCollection("classTestResource");
+        assertThat(mongoTemplate.getCollectionNames()).isEmpty();
     }
 
     private class MultipleResourceTestClass {

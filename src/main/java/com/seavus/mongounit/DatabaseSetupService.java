@@ -25,11 +25,6 @@ package com.seavus.mongounit;
 
 import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.commons.io.FileUtils;
 import org.bson.BsonInvalidOperationException;
 import org.springframework.core.annotation.AnnotationUtils;
@@ -40,6 +35,12 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.test.context.TestContext;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Internal class that is used to provide support for {@link DatabaseSetup}.
  *
@@ -49,31 +50,34 @@ import org.springframework.test.context.TestContext;
 class DatabaseSetupService {
 
     void cleanUp(TestContext testContext) {
-        loadResourcesToDatabase(testContext, true);
+        dropAllCollections(testContext);
     }
 
     void init(TestContext testContext) {
-        loadResourcesToDatabase(testContext, false);
+        loadResourcesToDatabase(testContext);
     }
 
-    private void loadResourcesToDatabase(TestContext testContext, boolean isCleanup) {
-        MongoTemplate mongoTemplate = testContext.getApplicationContext().getBean(MongoTemplate.class);
-        if (mongoTemplate == null) {
-            throw new MongoUnitException(
-                    "You must provide a valid bean for org.springframework.data.mongodb.core.MongoTemplate " +
-                            "before using @DatabaseSetup");
-        }
+    private void loadResourcesToDatabase(TestContext testContext) {
+        MongoTemplate mongoTemplate = getMongoTemplate(testContext);
         List<DatabaseSetup> annotations = getAnnotations(testContext);
         for (DatabaseSetupAnnotationAttributes attributes : DatabaseSetupAnnotationAttributes.get(annotations)) {
             String[] resources = attributes.getValue();
             for (String resourceName : resources) {
-                loadResourceToDatabase(resourceName, testContext, mongoTemplate, isCleanup);
+                loadResourceToDatabase(resourceName, testContext, mongoTemplate);
             }
         }
     }
 
-    private void loadResourceToDatabase(String resourceName, TestContext testContext, MongoTemplate mongoTemplate,
-            boolean isCleanup) {
+    private MongoTemplate getMongoTemplate(TestContext testContext) {
+        MongoTemplate mongoTemplate = testContext.getApplicationContext().getBean(MongoTemplate.class);
+        if (mongoTemplate == null) {
+            throw new MongoUnitException(
+                "You must provide a valid bean for org.springframework.data.mongodb.core.MongoTemplate " + "before " + "using @DatabaseSetup");
+        }
+        return mongoTemplate;
+    }
+
+    private void loadResourceToDatabase(String resourceName, TestContext testContext, MongoTemplate mongoTemplate) {
         try {
             Resource resource = loadResource(resourceName, testContext);
 
@@ -83,11 +87,7 @@ class DatabaseSetupService {
 
             BasicDBObject dbObject = parseResourceToDbObject(resource);
             dbObject.keySet().forEach(collection -> {
-                if (isCleanup) {
-                    executeCleanupMongoOperationsForCollection(mongoTemplate, collection);
-                } else {
-                    executeMongoOperationsForCollection(mongoTemplate, dbObject, collection);
-                }
+                executeMongoOperationsForCollection(mongoTemplate, dbObject, collection);
             });
         } catch (IOException | BsonInvalidOperationException e) {
             throw new MongoUnitException("Could not read content from provided resource: " + resourceName, e);
@@ -95,7 +95,7 @@ class DatabaseSetupService {
     }
 
     private void executeMongoOperationsForCollection(MongoTemplate mongoTemplate, BasicDBObject dbObject,
-            String collection) {
+        String collection) {
         Object collectionData = dbObject.get(collection);
         mongoTemplate.dropCollection(collection);
 
@@ -109,8 +109,9 @@ class DatabaseSetupService {
         }
     }
 
-    private void executeCleanupMongoOperationsForCollection(MongoTemplate mongoTemplate, String collection) {
-        mongoTemplate.dropCollection(collection);
+    private void dropAllCollections(TestContext testContext) {
+        MongoTemplate mongoTemplate = getMongoTemplate(testContext);
+        mongoTemplate.getCollectionNames().forEach(mongoTemplate::dropCollection);
     }
 
     private BasicDBObject parseResourceToDbObject(Resource resource) throws IOException {
@@ -127,9 +128,9 @@ class DatabaseSetupService {
     private List<DatabaseSetup> getAnnotations(TestContext testContext) {
         List<DatabaseSetup> annotations = new ArrayList<>();
         addAnnotationToList(annotations,
-                AnnotationUtils.findAnnotation(testContext.getTestClass(), DatabaseSetup.class));
+            AnnotationUtils.findAnnotation(testContext.getTestClass(), DatabaseSetup.class));
         addAnnotationToList(annotations,
-                AnnotationUtils.findAnnotation(testContext.getTestMethod(), DatabaseSetup.class));
+            AnnotationUtils.findAnnotation(testContext.getTestMethod(), DatabaseSetup.class));
 
         return annotations;
     }
